@@ -5,6 +5,7 @@ const app = {
     peer: null,
     conn: null,
     fileToSend: null,
+    thumbnail: null, // Store Base64 thumbnail
     incomingFileInfo: null,
     receivedChunks: [],
     receivedSize: 0,
@@ -13,6 +14,11 @@ const app = {
     showScreen: (id) => {
         document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
         document.getElementById(id).classList.add('active');
+        
+        // Reset preview if leaving transfer screen (optional)
+        if(id !== 'transfer-screen') {
+            document.getElementById('preview-container').style.display = 'none';
+        }
     },
 
     updateProgress: (percent) => {
@@ -38,12 +44,54 @@ const app = {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     },
 
+    // --- THUMBNAIL GENERATOR ---
+    generateThumbnail: (file) => {
+        // Only generate for images
+        if (!file.type.match('image.*')) return Promise.resolve(null);
+
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Resize logic (max 150px)
+                    const maxSize = 150;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height *= maxSize / width;
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width *= maxSize / height;
+                            height = maxSize;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Compress to low quality JPEG
+                    resolve(canvas.toDataURL('image/jpeg', 0.6));
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    },
+
     // --- SENDER LOGIC ---
 
     initSender: () => {
         app.showScreen('sender-step-1');
         
-        // Setup Drag & Drop
         const dropZone = document.getElementById('drop-zone');
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -54,18 +102,45 @@ const app = {
             e.preventDefault();
             dropZone.classList.remove('dragover');
             if (e.dataTransfer.files.length) {
-                app.handleFileSelect(e.dataTransfer.files[0]);
+                app.handleFileSelect(e.dataTransfer.files);
             }
         });
     },
 
-    handleFileSelect: (file) => {
-        if (!file) return;
-        app.fileToSend = file;
+    handleFileSelect: async (fileList) => {
+        if (!fileList || fileList.length === 0) return;
         
-        // Show file info
-        document.getElementById('file-name-display').innerText = file.name;
-        document.getElementById('file-size-display').innerText = `(${app.formatBytes(file.size)})`;
+        // Reset old data
+        app.thumbnail = null;
+
+        if (fileList.length > 1) {
+            document.querySelector('#sender-step-1 h2').innerText = "Zipping files...";
+            document.querySelector('#drop-zone p').innerText = "Please wait...";
+            
+            try {
+                const zip = new JSZip();
+                for (let i = 0; i < fileList.length; i++) {
+                    const f = fileList[i];
+                    zip.file(f.name, f);
+                }
+                const content = await zip.generateAsync({type: "blob"});
+                app.fileToSend = new File([content], "files.zip", { type: "application/zip" });
+            } catch (e) {
+                alert("Error zipping: " + e.message);
+                return;
+            }
+        } else {
+            app.fileToSend = fileList[0];
+            // Try generating thumbnail
+            try {
+                app.thumbnail = await app.generateThumbnail(app.fileToSend);
+            } catch(e) {
+                console.error("Thumbnail failed", e);
+            }
+        }
+        
+        document.getElementById('file-name-display').innerText = app.fileToSend.name;
+        document.getElementById('file-size-display').innerText = `(${app.formatBytes(app.fileToSend.size)})`;
         
         app.startHosting();
     },
@@ -86,18 +161,17 @@ const app = {
             console.log("Receiver connected!");
             app.conn = conn;
             
-            // Handle connection ready
             app.conn.on('open', () => {
-                // 1. Send Metadata
+                // 1. Send Metadata (include thumbnail if exists)
                 app.conn.send({
                     type: 'metadata',
                     name: app.fileToSend.name,
                     size: app.fileToSend.size,
-                    fileType: app.fileToSend.type
+                    fileType: app.fileToSend.type,
+                    thumbnail: app.thumbnail // <--- NEW
                 });
             });
 
-            // Listen for 'ack' to start sending data
             app.conn.on('data', (data) => {
                 if (data === 'ready-for-data') {
                     app.sendFileData();
@@ -110,30 +184,29 @@ const app = {
         app.showScreen('transfer-screen');
         document.getElementById('transfer-status').innerText = "Sending...";
         
+        // Show local preview for Sender too
+        if (app.thumbnail) {
+            document.getElementById('preview-container').style.display = 'block';
+            document.getElementById('preview-img').src = app.thumbnail;
+        }
+
         const file = app.fileToSend;
         let offset = 0;
 
-        // Reading and sending loop
         const reader = new FileReader();
         
         reader.onload = (e) => {
             const chunk = e.target.result;
-            
-            // Send chunk
-            app.conn.send({
-                type: 'chunk',
-                data: chunk
-            });
+            app.conn.send({ type: 'chunk', data: chunk });
 
             offset += chunk.byteLength;
-
-            // Update UI
             const percent = (offset / file.size) * 100;
             app.updateProgress(percent);
 
-            // Continue or Finish
             if (offset < file.size) {
-                readNextChunk();
+                // Determine next chunk
+                const nextSlice = file.slice(offset, offset + CHUNK_SIZE);
+                reader.readAsArrayBuffer(nextSlice);
             } else {
                 console.log("File sent completely.");
                 app.conn.send({ type: 'eof' });
@@ -141,13 +214,9 @@ const app = {
             }
         };
 
-        const readNextChunk = () => {
-            const slice = file.slice(offset, offset + CHUNK_SIZE);
-            reader.readAsArrayBuffer(slice);
-        };
-
-        // Start reading
-        readNextChunk();
+        // Start reading first chunk
+        const firstSlice = file.slice(0, CHUNK_SIZE);
+        reader.readAsArrayBuffer(firstSlice);
     },
 
     // --- RECEIVER LOGIC ---
@@ -160,7 +229,7 @@ const app = {
         const hostId = document.getElementById('receiver-id-input').value.toUpperCase().trim();
         if (hostId.length !== 4) return alert("Invalid ID");
 
-        app.peer = new Peer(); // Random ID for receiver
+        app.peer = new Peer(); 
 
         app.peer.on('open', () => {
             console.log("Receiver connecting to", hostId);
@@ -191,9 +260,16 @@ const app = {
             app.receivedSize = 0;
             
             document.getElementById('transfer-status').innerText = `Receiving ${data.name}...`;
-            console.log("Metadata received:", data);
             
-            // Tell sender we are ready
+            // Show Preview if available
+            if (data.thumbnail) {
+                document.getElementById('preview-container').style.display = 'block';
+                document.getElementById('preview-img').src = data.thumbnail;
+            } else {
+                document.getElementById('preview-container').style.display = 'none';
+            }
+            
+            console.log("Metadata received:", data);
             app.conn.send('ready-for-data');
         } 
         else if (data.type === 'chunk') {
@@ -225,6 +301,5 @@ const app = {
             a.click();
             document.body.removeChild(a);
         };
-        // Auto-click for convenience? No, let user click to save.
     }
 };
