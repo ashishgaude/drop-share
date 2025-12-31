@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DropShare - P2P File Transfer</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="libs/peerjs.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>DropShare</h1>
+            <p>Send files directly between devices. No cloud. No size limit.</p>
+        </header>
+
+        <!-- Mode Selection -->
+        <div id="step-selection" class="screen active">
+            <div class="card-row">
+                <div class="card" onclick="app.initSender()">
+                    <div class="icon">📤</div>
+                    <h2>Send</h2>
+                    <p>I have a file</p>
+                </div>
+                <div class="card" onclick="app.initReceiver()">
+                    <div class="icon">📥</div>
+                    <h2>Receive</h2>
+                    <p>I want to download</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SENDER: Select File -->
+        <div id="sender-step-1" class="screen">
+            <h2>Select File</h2>
+            <div class="drop-zone" id="drop-zone">
+                <p>Drag & Drop file here</p>
+                <p>or</p>
+                <input type="file" id="file-input" onchange="app.handleFileSelect(this.files[0])">
+                <label for="file-input" class="btn primary">Choose File</label>
+            </div>
+            <br>
+            <button class="btn secondary" onclick="location.reload()">Back</button>
+        </div>
+
+        <!-- SENDER: Waiting for Receiver -->
+        <div id="sender-step-2" class="screen">
+            <h2>Ready to Send</h2>
+            <div class="file-info">
+                <span id="file-name-display">my-photo.jpg</span>
+                <span id="file-size-display">(2.4 MB)</span>
+            </div>
+            
+            <p>Share this Code with the receiver:</p>
+            <div class="room-id-display" id="sender-id-display">...</div>
+            
+            <div class="loader">Waiting for connection...</div>
+            <button class="btn secondary" onclick="location.reload()">Cancel</button>
+        </div>
+
+        <!-- RECEIVER: Enter Code -->
+        <div id="receiver-step-1" class="screen">
+            <h2>Receive File</h2>
+            <p>Enter the 4-digit code from the Sender:</p>
+            <input type="text" id="receiver-id-input" placeholder="ABCD" maxlength="4" autocomplete="off">
+            <br>
+            <button class="btn primary" onclick="app.connectToSender()">Download</button>
+            <button class="btn secondary" onclick="location.reload()">Back</button>
+        </div>
+
+        <!-- TRANSFER PROGRESS (Shared) -->
+        <div id="transfer-screen" class="screen">
+            <h2 id="transfer-status">Transferring...</h2>
+            
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+            </div>
+            <p id="progress-text">0%</p>
+
+            <div id="download-actions" style="display:none;">
+                <p>Transfer Complete!</p>
+                <button class="btn primary" id="download-btn">Save File</button>
+                <button class="btn secondary" onclick="location.reload()">Send Another</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
