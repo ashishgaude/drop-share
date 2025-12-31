@@ -15,7 +15,6 @@ const app = {
         document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         
-        // Reset preview if leaving transfer screen (optional)
         if(id !== 'transfer-screen') {
             document.getElementById('preview-container').style.display = 'none';
         }
@@ -46,7 +45,6 @@ const app = {
 
     // --- THUMBNAIL GENERATOR ---
     generateThumbnail: (file) => {
-        // Only generate for images
         if (!file.type.match('image.*')) return Promise.resolve(null);
 
         return new Promise((resolve) => {
@@ -56,8 +54,6 @@ const app = {
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    
-                    // Resize logic (max 150px)
                     const maxSize = 150;
                     let width = img.width;
                     let height = img.height;
@@ -77,8 +73,6 @@ const app = {
                     canvas.width = width;
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // Compress to low quality JPEG
                     resolve(canvas.toDataURL('image/jpeg', 0.6));
                 };
                 img.src = e.target.result;
@@ -102,41 +96,22 @@ const app = {
             e.preventDefault();
             dropZone.classList.remove('dragover');
             if (e.dataTransfer.files.length) {
-                app.handleFileSelect(e.dataTransfer.files);
+                app.handleFileSelect(e.dataTransfer.files[0]);
             }
         });
     },
 
-    handleFileSelect: async (fileList) => {
-        if (!fileList || fileList.length === 0) return;
+    handleFileSelect: async (file) => {
+        if (!file) return;
         
-        // Reset old data
+        app.fileToSend = file;
         app.thumbnail = null;
 
-        if (fileList.length > 1) {
-            document.querySelector('#sender-step-1 h2').innerText = "Zipping files...";
-            document.querySelector('#drop-zone p').innerText = "Please wait...";
-            
-            try {
-                const zip = new JSZip();
-                for (let i = 0; i < fileList.length; i++) {
-                    const f = fileList[i];
-                    zip.file(f.name, f);
-                }
-                const content = await zip.generateAsync({type: "blob"});
-                app.fileToSend = new File([content], "files.zip", { type: "application/zip" });
-            } catch (e) {
-                alert("Error zipping: " + e.message);
-                return;
-            }
-        } else {
-            app.fileToSend = fileList[0];
-            // Try generating thumbnail
-            try {
-                app.thumbnail = await app.generateThumbnail(app.fileToSend);
-            } catch(e) {
-                console.error("Thumbnail failed", e);
-            }
+        // Try generating thumbnail
+        try {
+            app.thumbnail = await app.generateThumbnail(app.fileToSend);
+        } catch(e) {
+            console.error("Thumbnail failed", e);
         }
         
         document.getElementById('file-name-display').innerText = app.fileToSend.name;
@@ -162,13 +137,12 @@ const app = {
             app.conn = conn;
             
             app.conn.on('open', () => {
-                // 1. Send Metadata (include thumbnail if exists)
                 app.conn.send({
                     type: 'metadata',
                     name: app.fileToSend.name,
                     size: app.fileToSend.size,
                     fileType: app.fileToSend.type,
-                    thumbnail: app.thumbnail // <--- NEW
+                    thumbnail: app.thumbnail
                 });
             });
 
@@ -184,7 +158,6 @@ const app = {
         app.showScreen('transfer-screen');
         document.getElementById('transfer-status').innerText = "Sending...";
         
-        // Show local preview for Sender too
         if (app.thumbnail) {
             document.getElementById('preview-container').style.display = 'block';
             document.getElementById('preview-img').src = app.thumbnail;
@@ -192,31 +165,43 @@ const app = {
 
         const file = app.fileToSend;
         let offset = 0;
+        const dataChannel = app.conn.dataChannel;
 
         const reader = new FileReader();
         
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             const chunk = e.target.result;
-            app.conn.send({ type: 'chunk', data: chunk });
+            
+            // Backpressure check
+            while (dataChannel.bufferedAmount > 16 * 1024 * 1024) {
+                await new Promise(r => setTimeout(r, 50));
+            }
+
+            try {
+                app.conn.send({ type: 'chunk', data: chunk });
+            } catch (err) {
+                console.error("Send error:", err);
+                return;
+            }
 
             offset += chunk.byteLength;
             const percent = (offset / file.size) * 100;
             app.updateProgress(percent);
 
             if (offset < file.size) {
-                // Determine next chunk
-                const nextSlice = file.slice(offset, offset + CHUNK_SIZE);
-                reader.readAsArrayBuffer(nextSlice);
+                readNextChunk();
             } else {
-                console.log("File sent completely.");
                 app.conn.send({ type: 'eof' });
                 document.getElementById('transfer-status').innerText = "Sent Successfully!";
             }
         };
 
-        // Start reading first chunk
-        const firstSlice = file.slice(0, CHUNK_SIZE);
-        reader.readAsArrayBuffer(firstSlice);
+        const readNextChunk = () => {
+            const slice = file.slice(offset, offset + CHUNK_SIZE);
+            reader.readAsArrayBuffer(slice);
+        };
+
+        readNextChunk();
     },
 
     // --- RECEIVER LOGIC ---
@@ -261,7 +246,6 @@ const app = {
             
             document.getElementById('transfer-status').innerText = `Receiving ${data.name}...`;
             
-            // Show Preview if available
             if (data.thumbnail) {
                 document.getElementById('preview-container').style.display = 'block';
                 document.getElementById('preview-img').src = data.thumbnail;
@@ -269,7 +253,6 @@ const app = {
                 document.getElementById('preview-container').style.display = 'none';
             }
             
-            console.log("Metadata received:", data);
             app.conn.send('ready-for-data');
         } 
         else if (data.type === 'chunk') {
@@ -301,5 +284,34 @@ const app = {
             a.click();
             document.body.removeChild(a);
         };
+    },
+
+    // --- Donation Widget Logic ---
+    switchTab: (tabId) => {
+        // Switch buttons
+        const buttons = document.querySelectorAll('.tab-btn');
+        if(tabId === 'bmc') { 
+            buttons[0].classList.add('active'); 
+            buttons[1].classList.remove('active'); 
+        } else { 
+            buttons[1].classList.add('active'); 
+            buttons[0].classList.remove('active'); 
+        }
+
+        // Switch Content
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+    },
+
+    copyUPI: () => {
+        const upiId = "ashish.gaude4@okaxis";
+        navigator.clipboard.writeText(upiId).then(() => {
+            const textEl = document.getElementById('upi-id-text');
+            const originalText = textEl.innerText;
+            textEl.innerText = "Copied!";
+            setTimeout(() => {
+                textEl.innerText = originalText;
+            }, 2000);
+        });
     }
 };
