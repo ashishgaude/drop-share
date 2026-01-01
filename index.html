@@ -11,22 +11,38 @@
       gtag('config', 'G-CKDFD3TK38');
     </script>
     <meta charset="UTF-8">
-    <meta name="description" content="DropShare is a secure, serverless P2P file transfer tool. Share files of any size directly between devices with no cloud upload. Fast, private, and unlimited.">
-    <meta name="keywords" content="P2P file transfer, secure file share, webrtc file sharing, browser file transfer, no cloud file sharing, dropshare, unlimited file size">
+    <meta name="description" content="DropShare is a 100% free, serverless P2P file transfer tool. Share unlimited files directly between devices with no signup, no cloud upload, and total privacy.">
+    <meta name="keywords" content="free P2P file transfer, no signup file sharing, secure file share, webrtc file sharing, browser file transfer, free unlimited file sharing, dropshare, privacy focused transfer">
     <meta name="author" content="Ashish Gaude">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="DropShare - Secure P2P File Transfer">
-    <meta property="og:description" content="Send files directly between devices using WebRTC. No servers, no tracking, unlimited size.">
+    <meta property="og:title" content="DropShare - Free & Secure P2P File Transfer">
+    <meta property="og:description" content="Transfer files of any size for free. No servers, no accounts, no tracking. Just direct device-to-device sharing.">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="DropShare - Secure P2P File Transfer">
-    <meta property="twitter:description" content="Send files directly between devices using WebRTC. No servers, no tracking, unlimited size.">
+    <meta property="twitter:title" content="DropShare - Free & Secure P2P File Transfer">
+    <meta property="twitter:description" content="100% Free file sharing. No signup required. Unlimited size via WebRTC.">
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DropShare - P2P File Transfer</title>
+    <title>DropShare | Free Secure P2P File Transfer - No Signup Required</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%238b5cf6%22/><path d=%22M30 50 L70 50 M55 35 L70 50 L55 65%22 stroke=%22white%22 stroke-width=%228%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="DropShare - Free & Secure P2P File Transfer">
+    <meta property="og:description" content="Transfer files of any size for free. No servers, no accounts, no tracking. Just direct device-to-device sharing.">
+    <meta property="og:image" content="https://ashishgaude.github.io/drop-share/logo.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="DropShare - Free & Secure P2P File Transfer">
+    <meta property="twitter:description" content="100% Free file sharing. No signup required. Unlimited size via WebRTC.">
+    <meta property="twitter:image" content="https://ashishgaude.github.io/drop-share/logo.png">
+
     <link rel="stylesheet" href="style.css">
     <script src="libs/peerjs.min.js"></script>
 </head>
@@ -34,8 +50,21 @@
 
     <div class="container">
         <header>
+            <div class="app-logo">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#c084fc;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="45" fill="url(#logoGrad)" />
+                    <path d="M30 50 L70 50 M55 35 L70 50 L55 65" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </div>
             <h1>DropShare</h1>
-            <p>Send files directly between devices. No cloud. No size limit.</p>
+            <p class="tagline">Free. Private. Unlimited. 🚀</p>
+            <p>The simplest way to send files directly between devices without a cloud server.</p>
         </header>
 
         <!-- User Instructions -->
@@ -59,13 +88,13 @@
             <div class="card-row">
                 <div class="card" onclick="app.initSender()">
                     <div class="icon">📤</div>
-                    <h2>Send</h2>
-                    <p>I have a file</p>
+                    <h2>Send File</h2>
+                    <p>No size limit</p>
                 </div>
                 <div class="card" onclick="app.initReceiver()">
                     <div class="icon">📥</div>
                     <h2>Receive</h2>
-                    <p>I want to download</p>
+                    <p>Direct download</p>
                 </div>
             </div>
         </div>
@@ -127,12 +156,42 @@
             </div>
         </div>
 
+        <!-- Value Proposition Section -->
+        <section class="features-grid">
+            <div class="feature-item">
+                <h3>100% Free & Unlimited</h3>
+                <p>No costs, no subscriptions, and no file size limits. Send gigabytes in seconds.</p>
+            </div>
+            <div class="feature-item">
+                <h3>No Signup Required</h3>
+                <p>Start transferring immediately. No email, no passwords, no accounts needed.</p>
+            </div>
+            <div class="feature-item">
+                <h3>Privacy Focused</h3>
+                <p>Your files never touch the cloud. They stream directly from device to device.</p>
+            </div>
+        </section>
+
         <footer class="app-footer">
-            <p>Made with ❤️ by <a href="https://github.com/ashishgaude" target="_blank">Ashish Gaude</a></p>
-            <a href="https://github.com/ashishgaude/drop-share" target="_blank" class="github-link">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                <span>View on GitHub</span>
-            </a>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <p class="footer-label">OTHER PRODUCTS</p>
+                    <a href="https://ashishgaude.github.io/screen-recorder/" target="_blank" class="github-link">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle></svg>
+                        <span>Screen Recorder</span>
+                    </a>
+                </div>
+
+                <div class="footer-section">
+                    <p class="footer-label">SOURCE CODE</p>
+                    <a href="https://github.com/ashishgaude/drop-share" target="_blank" class="github-link">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        <span>GitHub Repo</span>
+                    </a>
+                </div>
+            </div>
+
+            <p class="made-with">Made with ❤️ by <a href="https://github.com/ashishgaude" target="_blank">Ashish Gaude</a></p>
         </footer>
 
     </div>
